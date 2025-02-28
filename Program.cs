@@ -1,71 +1,63 @@
-﻿// See https://aka.ms/new-console-template for more information
+﻿using System;
+using System.IO;
+using System.Linq;
 
-using System;
-using System.Globalization;
-using System.Threading;
-
-class Program
+public class OfficeFileSummary
 {
-    static void Main()
+    public static void Main(string[] args)
     {
-        while (true)
+        string directoryName = "FileCollection";
+        string resultsFileName = "results.txt";
+
+        
+        if (!Directory.Exists(directoryName))
         {
-            Console.Write("Enter a future time (HH:MM) or type 'exit' to quit: ");
-            string? userInput = Console.ReadLine();
-            
-            if (userInput?.ToLower() == "exit")
+            Directory.CreateDirectory(directoryName);
+            Console.WriteLine($"Created directory: {directoryName}");
+        }
+
+        
+        var officeFiles = new[] { ".xlsx", ".docx", ".pptx" };
+        int totalCount = 0;
+        long totalSize = 0;
+
+        var fileCounts = new Dictionary<string, int>();
+        var fileSizes = new Dictionary<string, long>();
+
+        foreach (var file in Directory.GetFiles(directoryName))
+        {
+            string extension = Path.GetExtension(file).ToLower();
+
+            if (officeFiles.Contains(extension))
             {
-                Console.WriteLine("Exiting program.");
-            }
-            
-            if (!ValidateTimeFormat(userInput))
-            {
-                Console.WriteLine("Invalid time format. Please enter in HH:MM format.");
-                continue;
-            }
-            
-            DateTime? targetTime = GetTargetTime(userInput);
-            if (targetTime.HasValue)
-            {
-                Countdown(targetTime.Value);
+                totalCount++;
+                totalSize += new FileInfo(file).Length;
+
+                if (!fileCounts.ContainsKey(extension))
+                {
+                    fileCounts[extension] = 0;
+                    fileSizes[extension] = 0;
+                }
+
+                fileCounts[extension]++;
+                fileSizes[extension] += new FileInfo(file).Length;
             }
         }
-    }
 
-    static bool ValidateTimeFormat(string? timeStr)
-    {
-        return DateTime.TryParseExact(timeStr, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None,out _ );
-    }
-
-    static DateTime? GetTargetTime(string userTime)
-    {
-        DateTime now = DateTime.Now;
-        if (DateTime.TryParseExact(userTime, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime targetTime))
+        
+        using (StreamWriter writer = new StreamWriter(resultsFileName))
         {
-            targetTime = new DateTime(now.Year, now.Month, now.Day, targetTime.Hour, targetTime.Minute, 0);
-            if (targetTime < now)
-            {
-                Console.WriteLine("The time has already elapsed. Please enter a future time.");
-                return null;
-            }
-            return targetTime;
-        }
-        return null;
-    }
+            writer.WriteLine("Office File Summary:");
+            writer.WriteLine($"Total Files: {totalCount}");
+            writer.WriteLine($"Total Size: {totalSize} bytes");
 
-    static void Countdown(DateTime targetTime)
-    {
-        while (true)
-        {
-            TimeSpan remainingTime = targetTime - DateTime.Now;
-            if (remainingTime.TotalSeconds == 0)
+            foreach (var extension in fileCounts.Keys)
             {
-                Console.WriteLine("Time's up!");
-                break;
+                writer.WriteLine($"- {extension} Files: {fileCounts[extension]}");
+                writer.WriteLine($"  Size: {fileSizes[extension]} bytes");
             }
-            Console.Write($"Time remaining: {remainingTime.Minutes} minutes, {remainingTime.Seconds} seconds\r");
-            Thread.Sleep(1000);
         }
-        Console.WriteLine();
+
+        Console.WriteLine($"Summary written to {resultsFileName}");
     }
 }

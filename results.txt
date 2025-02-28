@@ -1,0 +1,7 @@
+Office File Summary:
+Total Files: 2
+Total Size: 42471 bytes
+- .xlsx Files: 1
+  Size: 7739 bytes
+- .docx Files: 1
+  Size: 34732 bytes
