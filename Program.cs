@@ -1,63 +1,78 @@
 ﻿using System;
-using System.IO;
-using System.Linq;
+using System.Text.RegularExpressions;
 
-public class OfficeFileSummary
+class Program
 {
-    public static void Main(string[] args)
+    public static string ReverseDateFormat(string inputDate)
     {
-        string directoryName = "FileCollection";
-        string resultsFileName = "results.txt";
+        // Set a reasonable timeout for regex operations
+        TimeSpan regexTimeout = TimeSpan.FromSeconds(1);
+        string result = inputDate;  // Default to return the input if invalid or regex fails
 
+        // Define the regex pattern with named groups
+        string pattern = @"^(?<mon>\d{1,2})/(?<day>\d{1,2})/(?<year>\d{2,4})$";
         
-        if (!Directory.Exists(directoryName))
+        try
         {
-            Directory.CreateDirectory(directoryName);
-            Console.WriteLine($"Created directory: {directoryName}");
-        }
+            // Perform regex match with timeout
+            Regex regex = new Regex(pattern, RegexOptions.None, regexTimeout);
+            Match match = regex.Match(inputDate);
 
-        
-        var officeFiles = new[] { ".xlsx", ".docx", ".pptx" };
-        int totalCount = 0;
-        long totalSize = 0;
-
-        var fileCounts = new Dictionary<string, int>();
-        var fileSizes = new Dictionary<string, long>();
-
-        foreach (var file in Directory.GetFiles(directoryName))
-        {
-            string extension = Path.GetExtension(file).ToLower();
-
-            if (officeFiles.Contains(extension))
+            if (match.Success)
             {
-                totalCount++;
-                totalSize += new FileInfo(file).Length;
+                // Extract the month, day, and year using named groups
+                string month = match.Groups["mon"].Value;
+                string day = match.Groups["day"].Value;
+                string year = match.Groups["year"].Value;
 
-                if (!fileCounts.ContainsKey(extension))
+                // If year is 2 digits, convert it to 4 digits (assuming it's 20xx)
+                if (year.Length == 2)
                 {
-                    fileCounts[extension] = 0;
-                    fileSizes[extension] = 0;
+                    year = "20" + year;
                 }
 
-                fileCounts[extension]++;
-                fileSizes[extension] += new FileInfo(file).Length;
+                // Format the date as yyyy-mm-dd
+                result = $"{year}-{month.PadLeft(2, '0')}-{day.PadLeft(2, '0')}";
             }
         }
-
-        
-        using (StreamWriter writer = new StreamWriter(resultsFileName))
+        catch (RegexMatchTimeoutException)
         {
-            writer.WriteLine("Office File Summary:");
-            writer.WriteLine($"Total Files: {totalCount}");
-            writer.WriteLine($"Total Size: {totalSize} bytes");
-
-            foreach (var extension in fileCounts.Keys)
-            {
-                writer.WriteLine($"- {extension} Files: {fileCounts[extension]}");
-                writer.WriteLine($"  Size: {fileSizes[extension]} bytes");
-            }
+            Console.WriteLine("Regex operation timed out. Returning original input.");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"An error occurred: {ex.Message}");
         }
 
-        Console.WriteLine($"Summary written to {resultsFileName}");
+        return result;
+    }
+
+    static void Main(string[] args)
+    {
+        // Loop to keep asking the user for input
+        while (true)
+        {
+            Console.Write("Enter a date (mm/dd/yyyy): ");
+            string input = Console.ReadLine();
+
+            // Exit condition
+            if (string.IsNullOrWhiteSpace(input))
+            {
+                break;
+            }
+
+            // Validate if the input is a valid date
+            if (DateTime.TryParse(input, out DateTime validDate))
+            {
+                // If valid, attempt to convert and display the result
+                string result = ReverseDateFormat(input);
+                Console.WriteLine($"Converted date: {result}");
+            }
+            else
+            {
+                // If the input is invalid
+                Console.WriteLine("Invalid date format. Please enter a valid date.");
+            }
+        }
     }
 }
