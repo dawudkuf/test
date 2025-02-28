@@ -1,100 +1,71 @@
-﻿using System;
-using System.IO;
-using System.Linq;
+﻿// See https://aka.ms/new-console-template for more information
+
+using System;
+using System.Globalization;
+using System.Threading;
 
 class Program
 {
     static void Main()
     {
-        string baseDirectory = Path.Combine(Directory.GetCurrentDirectory(), "OfficeFiles");
-        Directory.CreateDirectory(baseDirectory);
-
-        // Step 1: Generate Random Office Files
-        GenerateRandomFiles(baseDirectory, 10);
-
-        // Step 2 & 3: Identify and Move Files
-        OrganizeFiles(baseDirectory);
-
-        // Step 4: Generate Summary Report
-        GenerateSummaryReport(baseDirectory);
-
-        Console.WriteLine("\nFile organization complete. Check the summary report.");
-    }
-
-    static void GenerateRandomFiles(string directory, int count)
-    {
-        Random random = new Random();
-        string[] extensions = { ".docx", ".xlsx", ".pptx" };
-
-        for (int i = 1; i <= count; i++)
+        while (true)
         {
-            string fileType = extensions[random.Next(extensions.Length)];
-            string fileName = $"File_{i}{fileType}";
-            string filePath = Path.Combine(directory, fileName);
-
-            // Create an empty file
-            File.WriteAllText(filePath, $"This is a sample {fileType} file.");
-        }
-
-        Console.WriteLine("Random Office files generated successfully.\n");
-    }
-
-    static void OrganizeFiles(string directory)
-    {
-        string[] fileTypes = { "Word", "Excel", "PowerPoint" };
-
-        foreach (string type in fileTypes)
-        {
-            Directory.CreateDirectory(Path.Combine(directory, type));
-        }
-
-        var files = Directory.GetFiles(directory).Where(f => f.EndsWith(".docx") || f.EndsWith(".xlsx") || f.EndsWith(".pptx"));
-
-        foreach (string file in files)
-        {
-            string extension = Path.GetExtension(file);
-            string subdirectory = extension switch
+            Console.Write("Enter a future time (HH:MM) or type 'exit' to quit: ");
+            string? userInput = Console.ReadLine();
+            
+            if (userInput?.ToLower() == "exit")
             {
-                ".docx" => "Word",
-                ".xlsx" => "Excel",
-                ".pptx" => "PowerPoint",
-                _ => "Others"
-            };
-
-            string destinationPath = Path.Combine(directory, subdirectory, Path.GetFileName(file));
-            File.Move(file, destinationPath);
-        }
-
-        Console.WriteLine("Files organized into respective folders.\n");
-    }
-
-    static void GenerateSummaryReport(string directory)
-    {
-        string reportPath = Path.Combine(directory, "SummaryReport.txt");
-        using (StreamWriter writer = new StreamWriter(reportPath))
-        {
-            writer.WriteLine("Office File Organizer Summary Report");
-            writer.WriteLine("=====================================");
-            writer.WriteLine($"Date: {DateTime.Now}\n");
-            writer.WriteLine("Student Name: Dawud kabir");
-            writer.WriteLine("Student ID: 10499\n");
-
-            string[] categories = { "Word", "Excel", "PowerPoint" };
-            foreach (string category in categories)
+                Console.WriteLine("Exiting program.");
+            }
+            
+            if (!ValidateTimeFormat(userInput))
             {
-                string subdirectory = Path.Combine(directory, category);
-                var files = Directory.GetFiles(subdirectory);
-                writer.WriteLine($"{category} Files ({files.Length}):");
-
-                foreach (string file in files)
-                {
-                    writer.WriteLine($"- {Path.GetFileName(file)} (Size: {new FileInfo(file).Length} bytes)");
-                }
-
-                writer.WriteLine();
+                Console.WriteLine("Invalid time format. Please enter in HH:MM format.");
+                continue;
+            }
+            
+            DateTime? targetTime = GetTargetTime(userInput);
+            if (targetTime.HasValue)
+            {
+                Countdown(targetTime.Value);
             }
         }
+    }
 
-        Console.WriteLine("Summary report generated successfully.\n");
+    static bool ValidateTimeFormat(string? timeStr)
+    {
+        return DateTime.TryParseExact(timeStr, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None,out _ );
+    }
+
+    static DateTime? GetTargetTime(string userTime)
+    {
+        DateTime now = DateTime.Now;
+        if (DateTime.TryParseExact(userTime, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out DateTime targetTime))
+        {
+            targetTime = new DateTime(now.Year, now.Month, now.Day, targetTime.Hour, targetTime.Minute, 0);
+            if (targetTime < now)
+            {
+                Console.WriteLine("The time has already elapsed. Please enter a future time.");
+                return null;
+            }
+            return targetTime;
+        }
+        return null;
+    }
+
+    static void Countdown(DateTime targetTime)
+    {
+        while (true)
+        {
+            TimeSpan remainingTime = targetTime - DateTime.Now;
+            if (remainingTime.TotalSeconds == 0)
+            {
+                Console.WriteLine("Time's up!");
+                break;
+            }
+            Console.Write($"Time remaining: {remainingTime.Minutes} minutes, {remainingTime.Seconds} seconds\r");
+            Thread.Sleep(1000);
+        }
+        Console.WriteLine();
     }
 }
