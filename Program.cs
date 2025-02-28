@@ -1,47 +1,22 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 
 class Program
 {
     static void Main()
     {
-        Console.WriteLine("===== Office File Organizer =====");
-
-        // Get user input with null checks
-        Console.Write("Enter your name: ");
-        string studentName = Console.ReadLine();
-        if (string.IsNullOrWhiteSpace(studentName))
-        {
-            Console.WriteLine("Student name cannot be empty.");
-            return;
-        }
-
-        Console.Write("Enter your student ID: ");
-        string studentID = Console.ReadLine();
-        if (string.IsNullOrWhiteSpace(studentID))
-        {
-            Console.WriteLine("Student ID cannot be empty.");
-            return;
-        }
-
-        Console.Write("Enter the directory path to organize: ");
-        string baseDirectory = Console.ReadLine();
-        if (string.IsNullOrWhiteSpace(baseDirectory) || !Directory.Exists(baseDirectory))
-        {
-            Console.WriteLine("Invalid directory path. Please enter a valid path.");
-            return;
-        }
-
-        Console.WriteLine("\nOrganizing files...");
+        string baseDirectory = Path.Combine(Directory.GetCurrentDirectory(), "OfficeFiles");
+        Directory.CreateDirectory(baseDirectory);
 
         // Step 1: Generate Random Office Files
-        GenerateRandomFiles(baseDirectory, 5);
+        GenerateRandomFiles(baseDirectory, 10);
 
         // Step 2 & 3: Identify and Move Files
         OrganizeFiles(baseDirectory);
 
         // Step 4: Generate Summary Report
-        GenerateSummaryReport(baseDirectory, studentName, studentID);
+        GenerateSummaryReport(baseDirectory);
 
         Console.WriteLine("\nFile organization complete. Check the summary report.");
     }
@@ -57,69 +32,69 @@ class Program
             string fileName = $"File_{i}{fileType}";
             string filePath = Path.Combine(directory, fileName);
 
-            // Simulate file content
-            File.WriteAllText(filePath, $"Sample {fileType} file content.");
+            // Create an empty file
+            File.WriteAllText(filePath, $"This is a sample {fileType} file.");
         }
 
-        Console.WriteLine("Random Office files created.\n");
+        Console.WriteLine("Random Office files generated successfully.\n");
     }
 
     static void OrganizeFiles(string directory)
     {
-        // Create subdirectories
-        string wordDir = Path.Combine(directory, "WordFiles");
-        string excelDir = Path.Combine(directory, "ExcelFiles");
-        string pptDir = Path.Combine(directory, "PPTFiles");
+        string[] fileTypes = { "Word", "Excel", "PowerPoint" };
 
-        Directory.CreateDirectory(wordDir);
-        Directory.CreateDirectory(excelDir);
-        Directory.CreateDirectory(pptDir);
+        foreach (string type in fileTypes)
+        {
+            Directory.CreateDirectory(Path.Combine(directory, type));
+        }
 
-        // Move files
-        foreach (string file in Directory.GetFiles(directory))
+        var files = Directory.GetFiles(directory).Where(f => f.EndsWith(".docx") || f.EndsWith(".xlsx") || f.EndsWith(".pptx"));
+
+        foreach (string file in files)
         {
             string extension = Path.GetExtension(file);
-            string destination = extension switch
+            string subdirectory = extension switch
             {
-                ".docx" => Path.Combine(wordDir, Path.GetFileName(file)),
-                ".xlsx" => Path.Combine(excelDir, Path.GetFileName(file)),
-                ".pptx" => Path.Combine(pptDir, Path.GetFileName(file)),
-                _ => null
+                ".docx" => "Word",
+                ".xlsx" => "Excel",
+                ".pptx" => "PowerPoint",
+                _ => "Others"
             };
 
-            if (destination != null)
-            {
-                File.Move(file, destination);
-                Console.WriteLine($"Moved: {Path.GetFileName(file)} -> {Path.GetFileName(destination)}");
-            }
+            string destinationPath = Path.Combine(directory, subdirectory, Path.GetFileName(file));
+            File.Move(file, destinationPath);
         }
+
+        Console.WriteLine("Files organized into respective folders.\n");
     }
 
-    static void GenerateSummaryReport(string directory, string studentName, string studentID)
+    static void GenerateSummaryReport(string directory)
     {
         string reportPath = Path.Combine(directory, "SummaryReport.txt");
         using (StreamWriter writer = new StreamWriter(reportPath))
         {
-            writer.WriteLine("===== Office File Organizer Summary Report =====");
+            writer.WriteLine("Office File Organizer Summary Report");
+            writer.WriteLine("=====================================");
             writer.WriteLine($"Date: {DateTime.Now}\n");
-            writer.WriteLine($"Student: {studentName} (ID: {studentID})\n");
-            writer.WriteLine("Organized Files:");
+            writer.WriteLine("Student Name: Dawud kabir");
+            writer.WriteLine("Student ID: 10499\n");
 
-            string[] categories = { "WordFiles", "ExcelFiles", "PPTFiles" };
+            string[] categories = { "Word", "Excel", "PowerPoint" };
             foreach (string category in categories)
             {
                 string subdirectory = Path.Combine(directory, category);
                 var files = Directory.GetFiles(subdirectory);
+                writer.WriteLine($"{category} Files ({files.Length}):");
 
                 foreach (string file in files)
                 {
-                    FileInfo fileInfo = new FileInfo(file);
-                    string fileType = category.Replace("Files", "");
-                    writer.WriteLine($"- {fileInfo.Name} ({fileType}, {fileInfo.Length / 1024} KB, Created: {fileInfo.CreationTime:yyyy-MM-dd})");
+                    writer.WriteLine($"- {Path.GetFileName(file)} (Size: {new FileInfo(file).Length} bytes)");
                 }
+
+                writer.WriteLine();
             }
         }
 
-        Console.WriteLine($"Summary report created: {reportPath}");
+        Console.WriteLine("Summary report generated successfully.\n");
     }
 }
